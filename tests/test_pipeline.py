@@ -61,7 +61,8 @@ def test_balance_and_expand(tmp_path):
 
 def test_model_forward():
     torch = pytest.importorskip("torch")
-    from src.model import PilotNet
+    from src.model import build_model
 
-    out = PilotNet()(torch.zeros(2, 3, CFG.img_h, CFG.img_w))
-    assert tuple(out.shape) == (2, 1)
+    for arch in ("pilotnet", "resnet18"):
+        out = build_model(arch)(torch.zeros(2, 3, CFG.img_h, CFG.img_w))
+        assert tuple(out.shape) == (2, 1), arch

@@ -18,6 +18,7 @@ Everything stays on your machine; nothing leaves localhost.
 
 import argparse
 import base64
+import glob
 import json
 import os
 import time
@@ -35,7 +36,7 @@ from .model import build_model
 from .visualize import activations, gradient_saliency, overlay_saliency, prep_image
 
 app = Flask(__name__, static_folder=None)
-WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+WEB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web")
 LUT = saliency_lut()
 
 STATE = {
@@ -234,9 +235,9 @@ def api_run(rid):
         if os.path.exists(p):
             with open(p) as f:
                 out[name.split(".")[0]] = json.load(f)
-    p = os.path.join(rd, "eval.json")
-    if os.path.exists(p):
-        with open(p) as f:
+    evals = sorted(glob.glob(os.path.join(rd, "*eval.json")))
+    if evals:
+        with open(evals[-1]) as f:
             out["eval"] = json.load(f)
     if not out:
         return jsonify({"error": "run not found"}), 404
@@ -284,7 +285,7 @@ def api_predict():
 
     t1 = time.perf_counter()
     with torch.no_grad():
-        steer = float(model(x.to(device)).item())
+        steer = float(model(x.unsqueeze(0).to(device)).item())
     infer_ms = (time.perf_counter() - t1) * 1000.0
     steer = float(np.clip(steer, -1, 1))
 

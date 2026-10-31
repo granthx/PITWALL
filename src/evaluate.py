@@ -20,7 +20,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from .config import CFG
-from .data import DrivingDataset, expand_cameras, load_log
+from .data import DrivingDataset, balance, expand_cameras, load_log
 from .model import build_model
 
 
@@ -80,6 +80,12 @@ def main():
     ap.add_argument("--model", required=True)
     ap.add_argument("--data", required=True, help="folder with driving_log.csv and IMG/")
     ap.add_argument("--n", type=int, default=5000, help="max centre-camera rows to evaluate")
+    ap.add_argument(
+        "--split",
+        default="all",
+        choices=["all", "val"],
+        help="'val' replicates train.py's split and scores only the held-out 20%%",
+    )
     ap.add_argument("--batch-size", type=int, default=128)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
@@ -96,11 +102,27 @@ def main():
     model.load_state_dict(ckpt["state_dict"])
 
     df = load_log(a.data).head(a.n)
-    samples = expand_cameras(df, a.data)[::3]  # centre camera only, no offsets
+    if a.split == "val":
+        from sklearn.model_selection import train_test_split
+
+        from .config import CFG
+
+        # identical procedure + seed to src.train, so this is the true held-out set
+        _, va = train_test_split(
+            expand_cameras(balance(df), a.data), test_size=CFG.val_split, random_state=CFG.seed
+        )
+        samples = [s for i, s in enumerate(va) if i % 3 == 0]  # centre cameras only
+    else:
+        samples = expand_cameras(df, a.data)[::3]  # centre camera only, no offsets
     ys, ps = evaluate(model, samples, device=device, batch_size=a.batch_size, workers=a.workers)
     m = metrics(ys, ps)
     m.update(
-        {"model": a.model, "data": a.data, "val_mse_ckpt": float(ckpt.get("val_mse", float("nan")))}
+        {
+            "model": a.model,
+            "data": a.data,
+            "split": a.split,
+            "val_mse_ckpt": float(ckpt.get("val_mse", float("nan"))),
+        }
     )
 
     base = a.out or os.path.splitext(a.model)[0]

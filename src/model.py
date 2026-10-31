@@ -114,7 +114,8 @@ class ResNetSteer(nn.Module):
         return self.layers(h)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.head(self.pool(self.features(x))).flatten(1)
+        z = self.pool(self.features(x)).flatten(1)  # (N, 512) — flatten BEFORE the head
+        return self.head(z)
 
 
 ARCHS = {"pilotnet": PilotNet, "resnet18": ResNetSteer}

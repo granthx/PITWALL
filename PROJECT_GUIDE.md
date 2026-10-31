@@ -120,16 +120,36 @@ Simulator steering ∈ **[−1, 1]**, mapping to **±25°**. The video's "−15�
 | Symptom | Likely cause |
 |---|---|
 | Car drives straight into the first turn | Not enough turn data / balancing too weak |
-| Zig-zags | Noisy keyboard labels; throttle too high; try lower speed |
+| Zig-zags | Noisy keyboard labels; throttle too high; try lower speed, or `python -m src.drive --smoothing 0.6` |
 | Sim won't connect | Wrong `python-socketio` version — must be the pinned 4.6.1 stack |
 | Great val loss, bad driving | Val MSE isn't driving quality; test in the sim. Check training/inference preprocessing match |
 | Path errors on training | CSV has absolute paths from another PC — handled: only the file name is used, in `<data>/IMG/` |
+| `eventlet` won't import on Python ≥ 3.12 | 0.33.3 used `ssl.wrap_socket`, which was removed. Pin `eventlet>=0.37` (verified 0.41.3 on Python 3.13; prints a deprecation warning — safe to ignore). The socket.io protocol pins stay at 4.6.1/3.13.2. |
+| `drive.py` serves exactly one client then stalls | The eventlet monkey-patch was missing; it now runs before every other import in `src/drive.py`. |
+| Web console: unbatched tensor into PilotNet | Conv layers tolerate `(C,H,W)` but Flatten then yields the wrong shape — always pass `(N,3,66,200)`. |
 
-## 11. Honest status of this codebase
+## 11. Honest status of this codebase (updated after the agent build-out)
 
-- ✅ Tested here: preprocessing, augmentation, CSV loading, balancing, camera expansion, synthetic data generator, module compile.
-- ⚠️ **Not run in the authoring sandbox** (PyTorch couldn't be installed there): the model forward pass, the training loop, and the simulator connection. The layer shapes were worked out by hand (flatten = 1152) and the test suite includes a forward-pass test. Run `pytest -q` on your machine first.
-- ⚠️ Simulator hyper-parameters (`max_speed`, correction 0.2, etc.) are sensible defaults to tune.
+- ✅ **Executed and verified on this machine** (Python 3.13.12, torch 2.15 CPU,
+  Windows): all 5 tests; end-to-end smoke-train; a 25-epoch PilotNet run on
+  synthetic data with run-dir artifacts; `src.evaluate` metrics + scatter;
+  `training_story.py` figure; feature maps + gradient saliency on synthetic
+  frames; the PIT WALL web console end-to-end (predict, saliency, maps,
+  histograms, loss curves) with ~10 ms CPU inference per frame; ONNX export
+  parity (see CHANGELOG.md for the numbers).
+- ✅ Verified pinned combos: `python-socketio==4.6.1` + `python-engineio==3.13.2`
+  + `eventlet 0.41.3` import cleanly on Python 3.13 and `drive.py --help` works.
+- ⚠️ **Not verifiable in this environment** (no display / no simulator install):
+  an actual autonomous lap. The bridge code follows the standard Udacity
+  protocol, uses the verified legacy socket.io stack, and now has a low-pass
+  steering filter plus frame recording (`--record`) to debug real runs. The
+  success criterion (`models/pilotnet.pt`, one lap, no leaving the road) is
+  the first thing to check on a machine that can run the sim.
+- ⚠️ All quality metrics published are on the **synthetic** track (polygon
+  road, label = curvature). They prove the pipeline learns; they do not
+  predict track-1 performance. Record real laps and re-run `src.evaluate`.
+- ⚠️ Simulator hyper-parameters (`max_speed`, correction 0.2, smoothing 0)
+  remain sensible defaults to tune.
 
 ## 12. Credits
 

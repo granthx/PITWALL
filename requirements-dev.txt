@@ -1,6 +1,7 @@
 # Dev/test tooling (not needed to train or drive)
 ruff>=0.5
 black>=24.0
-# optional, only for scripts/export_onnx.py parity checks:
+# optional, only for scripts/export_onnx.py (torch>=2.15 also needs onnxscript):
 # onnx
 # onnxruntime
+# onnxscript
