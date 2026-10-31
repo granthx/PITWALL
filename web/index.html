@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PIT WALL · behavioral cloning console</title>
+<meta name="description" content="Local console for a PilotNet behavioral-cloning self-driving car: steer from pixels, inspect what the layers learned.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050B16'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%233EE6C1' stroke-width='2.5'/%3E%3Cpath d='M16 5v11' stroke='%23F5A94B' stroke-width='2.5'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="12.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+      <path d="M17 4.5v12.5" stroke="currentColor" stroke-width="2.4" class="mark-needle"/>
+      <path d="M6.4 23.4 17 17l10.6 6.4" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    </svg>
+    <div class="brand-text">
+      <span class="brand-name">PIT&nbsp;WALL</span>
+      <span class="brand-sub">behavioral cloning · steering from pixels</span>
+    </div>
+  </div>
+
+  <nav class="views" aria-label="sections">
+    <button class="view-btn active" data-view="drive">Drive</button>
+    <button class="view-btn" data-view="data">Data</button>
+    <button class="view-btn" data-view="training">Training</button>
+  </nav>
+
+  <div class="status-chips">
+    <span class="chip" id="chip-device">…</span>
+    <span class="chip" id="chip-params">…</span>
+    <span class="chip chip-amber" id="chip-sim" title="the simulator bridge is not running; frames below come from the recorded dataset">sim offline</span>
+  </div>
+</header>
+
+<div class="subbar">
+  <span>session <b>local</b></span>
+  <span>bridge <b>:4567 idle</b></span>
+  <span>model <b id="sub-model">—</b></span>
+  <span>dataset <b id="sub-data">—</b></span>
+  <span class="sub-right" id="sub-note">every pixel stays on this machine</span>
+</div>
+
+<main>
+
+  <!-- ══════════════════════════ DRIVE ══════════════════════════ -->
+  <section id="view-drive" class="view active">
+    <div class="drive-grid">
+
+      <div class="col-main">
+        <div class="panel bracket" id="panel-frame">
+          <div class="panel-head">
+            <span class="p-label"><i class="sq"></i>Frame intake</span>
+            <span class="p-meta" id="frame-meta">waiting for a frame</span>
+          </div>
+          <div class="stage" id="stage" tabindex="0">
+            <img id="frame-img" alt="camera frame">
+            <i class="corner tl"></i><i class="corner tr"></i>
+            <i class="corner bl"></i><i class="corner br"></i>
+            <div class="stage-hud">
+              <span id="stage-mode">raw frame</span>
+              <span id="stage-lat">— ms</span>
+            </div>
+            <div class="drop-hint" id="drop-hint">drop a frame · or click to browse</div>
+            <div class="stage-busy" id="stage-busy"><span></span><span></span><span></span></div>
+          </div>
+          <div class="stage-actions">
+            <button class="tbtn" id="btn-sal">saliency <b>off</b></button>
+            <button class="tbtn" id="btn-random">random frame</button>
+            <button class="tbtn" id="btn-upload">upload frame</button>
+            <input type="file" id="file-input" accept="image/*" hidden>
+            <span class="stage-hint" id="stage-hint">YUV 66×200 · crop 60/25</span>
+          </div>
+        </div>
+
+        <div class="panel" id="panel-maps">
+          <div class="panel-head">
+            <span class="p-label"><i class="sq"></i>What the layers see</span>
+            <span class="p-meta">conv 1→5 · lines → shapes → one number</span>
+          </div>
+          <div class="maps-strip" id="maps-strip">
+            <div class="maps-empty">run a frame through the net — five conv layers will appear here</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-side">
+        <div class="panel bracket" id="panel-steer">
+          <div class="panel-head">
+            <span class="p-label"><i class="sq"></i>Steer cmd</span>
+            <span class="p-meta">ŷ = f(frame)</span>
+          </div>
+          <div class="wheel-zone">
+            <svg id="wheel" viewBox="0 0 260 260" aria-hidden="true">
+              <g id="wheel-ticks"></g>
+              <g id="wheel-rot">
+                <circle cx="130" cy="130" r="88" fill="none" stroke="#1B3050" stroke-width="15"/>
+                <circle cx="130" cy="130" r="88" fill="none" stroke="#2A4A73" stroke-width="3"
+                        stroke-dasharray="8 26" opacity=".7"/>
+                <path d="M130 18 A112 112 0 0 1 227 74" fill="none" stroke="#3EE6C1"
+                      stroke-width="3" opacity=".8"/>
+                <path d="M33 186 A112 112 0 0 1 33 74" fill="none" stroke="#F5A94B"
+                      stroke-width="3" opacity=".55"/>
+                <path d="M130 46v84" stroke="#23405F" stroke-width="13" stroke-linecap="round"/>
+                <path d="M130 130 51 176" stroke="#23405F" stroke-width="13" stroke-linecap="round"/>
+                <path d="M130 130l79 46" stroke="#23405F" stroke-width="13" stroke-linecap="round"/>
+                <circle cx="130" cy="130" r="30" fill="#0C1B31" stroke="#2A4A73" stroke-width="2"/>
+                <circle cx="130" cy="130" r="5" fill="#3EE6C1"/>
+                <path d="M130 60v20" stroke="#3EE6C1" stroke-width="4" stroke-linecap="round"/>
+              </g>
+            </svg>
+            <div class="deg-read">
+              <span id="deg-big">+0.0</span><span class="deg-unit">°</span>
+            </div>
+          </div>
+          <div class="tape" id="tape">
+            <div class="tape-ticks" id="tape-ticks"></div>
+            <div class="tape-marker" id="tape-marker"></div>
+          </div>
+          <div class="kv-grid">
+            <div class="kv"><span class="k">normalized</span><span class="v" id="val-norm">+0.000</span></div>
+            <div class="kv"><span class="k">throttle</span><span class="v" id="val-throttle">—</span></div>
+            <div class="kv"><span class="k">human label</span><span class="v" id="val-human">—</span></div>
+            <div class="kv"><span class="k">inference</span><span class="v" id="val-lat">—</span></div>
+          </div>
+          <div class="verdict" id="verdict"></div>
+        </div>
+
+        <div class="panel" id="panel-model">
+          <div class="panel-head">
+            <span class="p-label"><i class="sq"></i>Model</span>
+            <span class="p-meta" id="model-arch">pilotnet</span>
+          </div>
+          <div class="kv-grid two-col" id="model-kv">
+            <div class="kv"><span class="k">checkpoint</span><span class="v small" id="m-ckpt">—</span></div>
+            <div class="kv"><span class="k">input</span><span class="v" id="m-input">—</span></div>
+            <div class="kv"><span class="k">parameters</span><span class="v" id="m-params">—</span></div>
+            <div class="kv"><span class="k">val mse</span><span class="v" id="m-mse">—</span></div>
+            <div class="kv"><span class="k">held-out MAE</span><span class="v" id="m-mae">—</span></div>
+            <div class="kv"><span class="k">device</span><span class="v" id="m-device">—</span></div>
+          </div>
+        </div>
+
+        <div class="panel" id="panel-flow">
+          <div class="panel-head">
+            <span class="p-label"><i class="sq"></i>Signal path</span>
+            <span class="p-meta">no lane was ever labeled</span>
+          </div>
+          <svg class="flow" viewBox="0 0 300 74" aria-hidden="true">
+            <defs>
+              <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 8 4 0 8z" fill="#3E5A7E"/>
+              </marker>
+            </defs>
+            <g class="flow-nodes" font-family="IBM Plex Mono,monospace" font-size="9" fill="#7E93AC">
+              <rect x="4"   y="26" width="52" height="22" class="fnode"/>
+              <text x="30"  y="40" text-anchor="middle">frame</text>
+              <rect x="86"  y="26" width="52" height="22" class="fnode"/>
+              <text x="112" y="40" text-anchor="middle">YUV</text>
+              <rect x="168" y="26" width="52" height="22" class="fnode"/>
+              <text x="194" y="40" text-anchor="middle">conv×5</text>
+              <rect x="246" y="26" width="50" height="22" class="fnode hi"/>
+              <text x="271" y="40" text-anchor="middle">ŷ</text>
+              <line x1="56"  y1="37" x2="84"  y2="37" class="flink" marker-end="url(#arr)"/>
+              <line x1="138" y1="37" x2="166" y2="37" class="flink dash" marker-end="url(#arr)"/>
+              <line x1="220" y1="37" x2="244" y2="37" class="flink" marker-end="url(#arr)"/>
+              <text x="112" y="18" text-anchor="middle" class="flow-sub">crop·resize</text>
+              <text x="194" y="18" text-anchor="middle" class="flow-sub">lines→shapes</text>
+              <text x="271" y="18" text-anchor="middle" class="flow-sub">one number</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ DATA ══════════════════════════ -->
+  <section id="view-data" class="view">
+    <div class="data-grid">
+      <div class="panel bracket span-all">
+        <div class="panel-head">
+          <span class="p-label"><i class="sq"></i>Steering distribution</span>
+          <span class="legend">
+            <span class="lg"><i class="sw sw-raw"></i>raw</span>
+            <span class="lg"><i class="sw sw-bal"></i>balanced</span>
+          </span>
+        </div>
+        <div id="hist"></div>
+      </div>
+
+      <div class="panel span-all stats-row" id="data-stats"></div>
+
+      <div class="panel span-all">
+        <div class="panel-head">
+          <span class="p-label"><i class="sq"></i>Filmstrip</span>
+          <span class="p-meta">evenly sampled frames · click one to drive it</span>
+        </div>
+        <div class="filmstrip" id="filmstrip"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ TRAINING ══════════════════════════ -->
+  <section id="view-training" class="view">
+    <div class="train-grid">
+      <div class="panel bracket span-2">
+        <div class="panel-head">
+          <span class="p-label"><i class="sq"></i>Loss curve</span>
+          <span class="p-meta" id="run-meta">—</span>
+        </div>
+        <div id="losscurve"><div class="maps-empty">no runs yet</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="p-label"><i class="sq"></i>Runs</span>
+          <span class="p-meta">runs/</span>
+        </div>
+        <div class="runs-list" id="runs-list"></div>
+      </div>
+
+      <div class="panel span-2">
+        <div class="panel-head">
+          <span class="p-label"><i class="sq"></i>Training story</span>
+          <span class="p-meta">guess → error → adjust · one fixed image</span>
+        </div>
+        <div class="story-wrap" id="story">
+          <div class="maps-empty" id="story-empty">no story figure yet</div>
+          <img id="story-img" alt="training story" hidden>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="p-label"><i class="sq"></i>Held-out metrics</span>
+          <span class="p-meta" id="eval-meta">src.evaluate</span>
+        </div>
+        <div id="eval-table"><div class="maps-empty">run src.evaluate to fill this</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span class="foot-strong">PIT WALL</span>
+  <span>PilotNet re-implementation · NVIDIA “End to End Learning for Self-Driving Cars”</span>
+  <span class="sub-right"><a href="https://github.com/udacity/self-driving-car-sim" target="_blank" rel="noopener">Udacity simulator</a> · data never leaves this machine</span>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>
