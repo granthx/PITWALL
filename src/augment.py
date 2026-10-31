@@ -1,5 +1,6 @@
 """Data augmentation. All functions take/return RGB uint8 images in raw
 simulator size (160x320) plus a steering angle in [-1, 1]."""
+
 import cv2
 import numpy as np
 
@@ -31,7 +32,7 @@ def random_shadow(img, rng):
     h, w = img.shape[:2]
     x1, x2 = w * rng.random(), w * rng.random()
     xm, ym = np.meshgrid(np.arange(w), np.arange(h))
-    mask = ((ym * (x2 - x1) - h * (xm - x1)) > 0)
+    mask = (ym * (x2 - x1) - h * (xm - x1)) > 0
     ratio = 0.2 + 0.5 * rng.random()
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS).astype(np.float32)
     hls[:, :, 1][mask] *= ratio

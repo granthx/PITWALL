@@ -4,6 +4,7 @@ steering label is derived from the curvature.)
 
     python scripts/make_synthetic_data.py --out data/synthetic --n 300
 """
+
 import argparse
 import os
 
@@ -13,8 +14,8 @@ import numpy as np
 
 def frame(curve, rng):
     img = np.zeros((160, 320, 3), np.uint8)
-    img[:70] = (200, 190, 170)        # sky
-    img[70:] = (60, 90, 60)           # grass
+    img[:70] = (200, 190, 170)  # sky
+    img[70:] = (60, 90, 60)  # grass
     horizon_x = 160 + curve * 120
     pts = np.array([[60, 160], [260, 160], [horizon_x + 15, 70], [horizon_x - 15, 70]], np.int32)
     cv2.fillPoly(img, [pts], (70, 70, 75))
@@ -40,7 +41,7 @@ def main():
             n = f"{cam}_{i:05d}.jpg"
             cv2.imwrite(os.path.join(a.out, "IMG", n), cv2.cvtColor(f, cv2.COLOR_RGB2BGR))
             names.append(f"IMG/{n}")
-        rows.append(",".join(names + [f"{steer:.4f}", "1", "0", "15"]))
+        rows.append(",".join([*names, f"{steer:.4f}", "1", "0", "15"]))
     with open(os.path.join(a.out, "driving_log.csv"), "w") as fh:
         fh.write("\n".join(rows) + "\n")
     print(f"wrote {a.n} rows to {a.out}")

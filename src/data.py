@@ -1,6 +1,6 @@
 """Loading the Udacity driving_log.csv, balancing it, and serving batches."""
+
 import os
-from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -41,7 +41,7 @@ def balance(df: pd.DataFrame, cfg=CFG) -> pd.DataFrame:
 
     bins = np.linspace(-1, 1, cfg.n_hist_bins + 1)
     idx = np.digitize(df["steering"].values, bins)
-    drop: List[int] = []
+    drop: list[int] = []
     for b in np.unique(idx):
         members = np.where(idx == b)[0]
         if len(members) > cfg.max_per_bin:
@@ -49,7 +49,7 @@ def balance(df: pd.DataFrame, cfg=CFG) -> pd.DataFrame:
     return df.drop(index=drop).reset_index(drop=True)
 
 
-def expand_cameras(df: pd.DataFrame, data_dir: str, cfg=CFG) -> List[Tuple[str, float]]:
+def expand_cameras(df: pd.DataFrame, data_dir: str, cfg=CFG) -> list[tuple[str, float]]:
     """Turn each row into 3 samples (center/left/right) with steering offsets.
     Left/right cameras teach the car how to recover back to the lane centre."""
     samples = []
@@ -62,7 +62,7 @@ def expand_cameras(df: pd.DataFrame, data_dir: str, cfg=CFG) -> List[Tuple[str, 
 
 
 class DrivingDataset(Dataset):
-    def __init__(self, samples: List[Tuple[str, float]], training: bool, seed: int = 0):
+    def __init__(self, samples: list[tuple[str, float]], training: bool, seed: int = 0):
         self.samples = samples
         self.training = training
         self.rng = np.random.default_rng(seed)

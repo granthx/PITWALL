@@ -1,0 +1,6 @@
+# Dev/test tooling (not needed to train or drive)
+ruff>=0.5
+black>=24.0
+# optional, only for scripts/export_onnx.py parity checks:
+# onnx
+# onnxruntime

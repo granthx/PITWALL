@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["RUF001"]  # allow ×/· in user-facing strings
+
+[tool.ruff.lint.per-file-ignores]
+# eventlet.monkey_patch() must run before the other imports
+"src/drive.py" = ["E402"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
