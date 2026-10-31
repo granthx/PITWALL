@@ -15,6 +15,7 @@ Shape walk-through for a 3x66x200 input (PilotNet):
 A ResNet-18-style regressor (built from scratch, no torchvision) is available
 via ``build_model("resnet18")`` for the Phase 6 model comparison.
 """
+
 import torch
 import torch.nn as nn
 
@@ -27,18 +28,26 @@ class PilotNet(nn.Module):
     def __init__(self, dropout: float = CFG.dropout):
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3, 24, 5, stride=2), nn.ELU(),
-            nn.Conv2d(24, 36, 5, stride=2), nn.ELU(),
-            nn.Conv2d(36, 48, 5, stride=2), nn.ELU(),
-            nn.Conv2d(48, 64, 3), nn.ELU(),
-            nn.Conv2d(64, 64, 3), nn.ELU(),
+            nn.Conv2d(3, 24, 5, stride=2),
+            nn.ELU(),
+            nn.Conv2d(24, 36, 5, stride=2),
+            nn.ELU(),
+            nn.Conv2d(36, 48, 5, stride=2),
+            nn.ELU(),
+            nn.Conv2d(48, 64, 3),
+            nn.ELU(),
+            nn.Conv2d(64, 64, 3),
+            nn.ELU(),
         )
         self.head = nn.Sequential(
             nn.Flatten(),
             nn.Dropout(dropout),
-            nn.Linear(1152, 100), nn.ELU(),
-            nn.Linear(100, 50), nn.ELU(),
-            nn.Linear(50, 10), nn.ELU(),
+            nn.Linear(1152, 100),
+            nn.ELU(),
+            nn.Linear(100, 50),
+            nn.ELU(),
+            nn.Linear(50, 10),
+            nn.ELU(),
             nn.Linear(10, 1),
         )
 
@@ -81,14 +90,19 @@ class ResNetSteer(nn.Module):
         super().__init__()
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False),  # 66x200 -> 33x100
-            nn.BatchNorm2d(64), nn.ReLU(inplace=True),
-            nn.MaxPool2d(3, stride=2, padding=1),                  # -> 16x50
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, stride=2, padding=1),  # -> 16x50
         )
         self.layers = nn.Sequential(
-            BasicBlock(64, 64), BasicBlock(64, 64),                # 16x50
-            BasicBlock(64, 128, stride=2), BasicBlock(128, 128),   # 8x25
-            BasicBlock(128, 256, stride=2), BasicBlock(256, 256),  # 4x12
-            BasicBlock(256, 512, stride=2), BasicBlock(512, 512),  # 2x6
+            BasicBlock(64, 64),
+            BasicBlock(64, 64),  # 16x50
+            BasicBlock(64, 128, stride=2),
+            BasicBlock(128, 128),  # 8x25
+            BasicBlock(128, 256, stride=2),
+            BasicBlock(256, 256),  # 4x12
+            BasicBlock(256, 512, stride=2),
+            BasicBlock(512, 512),  # 2x6
         )
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.head = nn.Sequential(nn.Dropout(dropout), nn.Linear(512, 1))

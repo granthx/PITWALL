@@ -7,8 +7,8 @@ Artifacts land in ``runs/<timestamp>/`` (config snapshot, history JSON,
 loss-curve PNG, best/last + per-epoch checkpoints) and the best checkpoint is
 also copied to ``--out`` (default models/pilotnet.pt) for ``src.drive``.
 """
+
 import argparse
-import copy
 import dataclasses
 import json
 import os
@@ -16,6 +16,7 @@ import random
 import time
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -84,13 +85,20 @@ def main():
     ap.add_argument("--workers", type=int, default=CFG.num_workers)
     ap.add_argument("--seed", type=int, default=CFG.seed, help="random seed (default from config)")
     ap.add_argument("--resume", default=None, help="checkpoint (.pt) to resume from")
-    ap.add_argument("--no-epoch-ckpts", action="store_true",
-                    help="skip per-epoch snapshots (needed by scripts/training_story.py)")
+    ap.add_argument(
+        "--no-epoch-ckpts",
+        action="store_true",
+        help="skip per-epoch snapshots (needed by scripts/training_story.py)",
+    )
     ap.add_argument("--run-dir", default=None, help="override the runs/<timestamp> directory")
     args = ap.parse_args()
 
     seed_everything(args.seed)
-    device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
+    device = (
+        "cuda"
+        if torch.cuda.is_available()
+        else ("mps" if torch.backends.mps.is_available() else "cpu")
+    )
     print(f"device: {device} | arch: {args.arch}")
 
     run_dir = args.run_dir or time.strftime("runs/%Y%m%d-%H%M%S")
@@ -101,10 +109,19 @@ def main():
     tr, va = train_test_split(samples, test_size=CFG.val_split, random_state=args.seed)
     print(f"rows after balancing: {len(df)} | samples: train={len(tr)} val={len(va)}")
 
-    tl = DataLoader(DrivingDataset(tr, True, args.seed), batch_size=args.batch_size,
-                    shuffle=True, num_workers=args.workers, drop_last=True)
-    vl = DataLoader(DrivingDataset(va, False), batch_size=args.batch_size,
-                    shuffle=False, num_workers=args.workers)
+    tl = DataLoader(
+        DrivingDataset(tr, True, args.seed),
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.workers,
+        drop_last=True,
+    )
+    vl = DataLoader(
+        DrivingDataset(va, False),
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.workers,
+    )
 
     model = build_model(args.arch).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=CFG.weight_decay)
@@ -123,38 +140,66 @@ def main():
 
     # Snapshot of everything that defines this run.
     with open(os.path.join(run_dir, "config.json"), "w") as f:
-        json.dump({"cfg": dataclasses.asdict(CFG), "args": vars(args),
-                   "n_train": len(tr), "n_val": len(va),
-                   "torch": torch.__version__, "device": device}, f, indent=2)
+        json.dump(
+            {
+                "cfg": dataclasses.asdict(CFG),
+                "args": vars(args),
+                "n_train": len(tr),
+                "n_val": len(va),
+                "torch": torch.__version__,
+                "device": device,
+            },
+            f,
+            indent=2,
+        )
 
     history, bad = [], 0
     last_path = os.path.join(run_dir, "last.pt")
     for ep in range(start_epoch, args.epochs + 1):
-        t, t_mae = run_epoch(model, tl, loss_fn, device, opt)
+        t, _ = run_epoch(model, tl, loss_fn, device, opt)
         v, v_mae = run_epoch(model, vl, loss_fn, device)
         sched.step(v)
-        history.append({"epoch": ep, "train_mse": t, "val_mse": v,
-                        "val_mae_deg": v_mae * CFG.sim_max_angle_deg,
-                        "lr": opt.param_groups[0]["lr"]})
-        print(f"epoch {ep:02d}  train_mse={t:.5f}  val_mse={v:.5f}  "
-              f"val_MAE≈{v_mae * CFG.sim_max_angle_deg:.2f} deg")
+        history.append(
+            {
+                "epoch": ep,
+                "train_mse": t,
+                "val_mse": v,
+                "val_mae_deg": v_mae * CFG.sim_max_angle_deg,
+                "lr": opt.param_groups[0]["lr"],
+            }
+        )
+        print(
+            f"epoch {ep:02d}  train_mse={t:.5f}  val_mse={v:.5f}  "
+            f"val_MAE≈{v_mae * CFG.sim_max_angle_deg:.2f} deg"
+        )
 
         state = {"state_dict": model.state_dict(), "arch": args.arch, "epoch": ep}
         if not args.no_epoch_ckpts:
             torch.save(state, os.path.join(run_dir, f"epoch_{ep:02d}.pt"))
         if v < best:
             best = v
-            torch.save({**state, "val_mse": v, "best": best, "optimizer": opt.state_dict()}, last_path)
+            torch.save(
+                {**state, "val_mse": v, "best": best, "optimizer": opt.state_dict()}, last_path
+            )
             torch.save({**state, "val_mse": v}, args.out)
             print(f"  saved best -> {args.out}")
             bad = 0
         else:
             if os.path.exists(last_path):  # keep optimizer state for --resume
                 prev = torch.load(last_path, map_location="cpu")
-                torch.save({**state, "val_mse": v, "best": best,
-                            "optimizer": prev.get("optimizer", opt.state_dict())}, last_path)
+                torch.save(
+                    {
+                        **state,
+                        "val_mse": v,
+                        "best": best,
+                        "optimizer": prev.get("optimizer", opt.state_dict()),
+                    },
+                    last_path,
+                )
             else:
-                torch.save({**state, "val_mse": v, "best": best, "optimizer": opt.state_dict()}, last_path)
+                torch.save(
+                    {**state, "val_mse": v, "best": best, "optimizer": opt.state_dict()}, last_path
+                )
             bad += 1
             if bad >= CFG.patience:
                 print("early stopping")
