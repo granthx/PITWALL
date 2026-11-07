@@ -88,8 +88,10 @@ def gradient_saliency(model, x: torch.Tensor) -> np.ndarray:
     if x.dim() == 3 and x.shape[0] == 3 and in_channels > 3:
         x = x.repeat(in_channels // 3, 1, 1)
     xin = x[None].clone().requires_grad_(True)
-    model(xin).backward()
-    sal = xin.grad[0].abs().mean(0).numpy()
+    out = model(xin)
+    model.zero_grad(set_to_none=True)
+    out.backward()
+    sal = xin.grad[0].abs().mean(0).cpu().numpy() if xin.grad is not None else np.zeros((x.shape[1], x.shape[2]), dtype=np.float32)
     hi = np.percentile(sal, 99)
     return np.clip(sal / (hi + 1e-9), 0, 1)
 
