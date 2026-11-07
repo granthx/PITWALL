@@ -150,6 +150,29 @@ def disconnect(sid):
         top_spd = max(speeds)
         jitter = float(np.mean(np.abs(np.diff(steers)))) if len(steers) > 1 else 0.0
         print("=" * 55)
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+            run_dir = STATE["record_dir"] or time.strftime("runs/drive_%Y%m%d-%H%M%S")
+            os.makedirs(run_dir, exist_ok=True)
+            plot_path = os.path.join(run_dir, "closed_loop_telemetry.png")
+            fig, ax1 = plt.subplots(figsize=(10, 4.5))
+            ax2 = ax1.twinx()
+            ax1.plot(times, speeds, color="#2ecc71", label="Speed (mph)", lw=1.5)
+            ax2.plot(times, steers, color="#3498db", label="Steering (°)", lw=1.2, alpha=0.85)
+            ax1.set_xlabel("Time (s)")
+            ax1.set_ylabel("Speed (mph)", color="#2ecc71")
+            ax2.set_ylabel("Steering Angle (°)", color="#3498db")
+            ax1.set_title(f"Autonomous Closed-Loop Run (Avg Speed: {mean_spd:.1f} mph, Jitter: {jitter:.2f}°)")
+            ax1.grid(alpha=0.3)
+            fig.tight_layout()
+            fig.savefig(plot_path, dpi=130)
+            plt.close(fig)
+            print(f"Saved run telemetry chart -> {plot_path}\n")
+        except Exception:
+            pass
+
         print("         AUTONOMOUS RUN BENCHMARK SUMMARY        ")
         print("=" * 55)
         print(f"Total Time Active : {dur:.1f} s ({len(logs)} frames)")
