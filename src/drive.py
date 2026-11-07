@@ -60,7 +60,19 @@ def telemetry(sid, data):
         return
     speed = float(data["speed"])
     img = np.asarray(Image.open(BytesIO(base64.b64decode(data["image"]))).convert("RGB"))
-    x = torch.from_numpy(to_tensor_array(preprocess(img))).unsqueeze(0).to(STATE["device"])
+    arr = to_tensor_array(preprocess(img))  # (3, 66, 200)
+
+    num_frames_needed = max(1, STATE["in_channels"] // 3)
+    if num_frames_needed > 1:
+        if len(STATE["frame_buffer"]) == 0:
+            for _ in range(num_frames_needed):
+                STATE["frame_buffer"].append(arr)
+        else:
+            STATE["frame_buffer"].append(arr)
+        stacked = np.concatenate(list(STATE["frame_buffer"]), axis=0)
+        x = torch.from_numpy(stacked).unsqueeze(0).to(STATE["device"])
+    else:
+        x = torch.from_numpy(arr).unsqueeze(0).to(STATE["device"])
     t0 = time.perf_counter()
     with torch.no_grad():
         raw = float(STATE["model"](x).item())
