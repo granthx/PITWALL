@@ -63,7 +63,8 @@ def _hook_convs(model: torch.nn.Module):
             handles.append(model.layers[i].register_forward_hook(hook))
     else:
         for mod in model.modules():
-            if isinstance(mod, (torch.nn.ELU, torch.nn.ReLU)) and not isinstance(mod, torch.nn.ReLU6):
+            is_act = isinstance(mod, (torch.nn.ELU, torch.nn.ReLU))
+            if is_act and not isinstance(mod, torch.nn.ReLU6):
                 handles.append(mod.register_forward_hook(hook))
     return acts, handles
 
@@ -91,7 +92,10 @@ def gradient_saliency(model, x: torch.Tensor) -> np.ndarray:
     out = model(xin)
     model.zero_grad(set_to_none=True)
     out.backward()
-    sal = xin.grad[0].abs().mean(0).cpu().numpy() if xin.grad is not None else np.zeros((x.shape[1], x.shape[2]), dtype=np.float32)
+    if xin.grad is not None:
+        sal = xin.grad[0].abs().mean(0).cpu().numpy()
+    else:
+        sal = np.zeros((x.shape[1], x.shape[2]), dtype=np.float32)
     hi = np.percentile(sal, 99)
     return np.clip(sal / (hi + 1e-9), 0, 1)
 

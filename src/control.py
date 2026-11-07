@@ -49,9 +49,6 @@ def lane_centering_assist(rgb: np.ndarray) -> float:
     left_road = float(asphalt[:, 15:120].mean())
     right_road = float(asphalt[:, 200:305].mean())
     diff = right_road - left_road
-    if abs(diff) < 0.22:
-        road_nudge = 0.0
-    else:
-        road_nudge = (diff - np.sign(diff) * 0.22) * 0.30
+    road_nudge = 0.0 if abs(diff) < 0.22 else (diff - np.sign(diff) * 0.22) * 0.30
 
     return float(np.clip(curb_nudge + road_nudge, -0.35, 0.35))

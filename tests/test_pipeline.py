@@ -65,7 +65,8 @@ def test_model_forward():
 
     for arch in ("pilotnet", "resnet18", "spatial_resnet18"):
         channels = 9 if arch == "spatial_resnet18" else 3
-        out = build_model(arch, in_channels=channels)(torch.zeros(2, channels, CFG.img_h, CFG.img_w))
+        model = build_model(arch, in_channels=channels)
+        out = model(torch.zeros(2, channels, CFG.img_h, CFG.img_w))
         assert tuple(out.shape) == (2, 1), arch
 
 

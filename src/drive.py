@@ -93,7 +93,8 @@ def telemetry(sid, data):
     dt_ms = (time.perf_counter() - t0) * 1000.0
 
     steer_deg = steering * CFG.sim_max_angle_deg
-    STATE["telemetry_log"].append((time.perf_counter() - STATE["start_time"], speed, steer_deg, throttle))
+    t_elapsed = time.perf_counter() - STATE["start_time"]
+    STATE["telemetry_log"].append((t_elapsed, speed, steer_deg, throttle))
 
     print(
         f"steer={steering:+.3f} ({steering * CFG.sim_max_angle_deg:+.1f} deg)  "
@@ -144,7 +145,7 @@ def disconnect(sid):
     print("\nsimulator disconnected:", sid)
     if STATE["telemetry_log"]:
         logs = STATE["telemetry_log"]
-        times, speeds, steers, throttles = zip(*logs)
+        times, speeds, steers, _throttles = zip(*logs)
         dur = times[-1] - times[0] if len(times) > 1 else 0
         mean_spd = sum(speeds) / len(speeds)
         top_spd = max(speeds)
@@ -164,7 +165,11 @@ def disconnect(sid):
             ax1.set_xlabel("Time (s)")
             ax1.set_ylabel("Speed (mph)", color="#2ecc71")
             ax2.set_ylabel("Steering Angle (°)", color="#3498db")
-            ax1.set_title(f"Autonomous Closed-Loop Run (Avg Speed: {mean_spd:.1f} mph, Jitter: {jitter:.2f}°)")
+            title = (
+                f"Autonomous Closed-Loop Run (Avg Speed: {mean_spd:.1f} mph, "
+                f"Jitter: {jitter:.2f}°)"
+            )
+            ax1.set_title(title)
             ax1.grid(alpha=0.3)
             fig.tight_layout()
             fig.savefig(plot_path, dpi=130)

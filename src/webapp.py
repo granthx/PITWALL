@@ -384,7 +384,10 @@ def main():
         col_list = [os.path.basename(str(p).strip().replace("\\", "/")) for p in df[col]]
         for idx_i, (bname, s) in enumerate(zip(col_list, df["steering"])):
             labels[bname] = float(s) + off
-            hist = [os.path.join(a.data, "IMG", col_list[max(0, idx_i - k)]) for k in range(n_stack - 1, -1, -1)]
+            hist = [
+                os.path.join(a.data, "IMG", col_list[max(0, idx_i - k)])
+                for k in range(n_stack - 1, -1, -1)
+            ]
             seq_paths[bname] = hist
     STATE["labels"] = labels
     STATE["seq_paths"] = seq_paths
