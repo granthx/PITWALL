@@ -202,7 +202,17 @@ def main():
     ap.add_argument(
         "--smoothing",
         type=float,
-        default=0.0,
+        default=0.25,
+    )
+    ap.add_argument(
+        "--steer-gain",
+        type=float,
+        default=1.15,
+    )
+    ap.add_argument(
+        "--max-speed",
+        type=float,
+        default=CFG.max_speed,
         help="low-pass weight on previous steering, 0..1 (0 = off). "
         "Try 0.5-0.8 if the car zig-zags.",
     )
@@ -214,6 +224,8 @@ def main():
     STATE["device"] = "cuda" if torch.cuda.is_available() else "cpu"
     STATE["model"] = load_model(args.model, STATE["device"])
     STATE["smoothing"] = float(np.clip(args.smoothing, 0.0, 0.95))
+    STATE["steer_gain"] = float(args.steer_gain)
+    STATE["max_speed"] = float(args.max_speed)
     if args.record:
         STATE["record_dir"] = time.strftime("runs/record_%Y%m%d-%H%M%S")
         os.makedirs(os.path.join(STATE["record_dir"], "frames"), exist_ok=True)
