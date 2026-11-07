@@ -113,7 +113,11 @@ def telemetry(sid, data):
 @sio.on("connect")
 def connect(sid, environ):
     print("simulator connected:", sid)
-    send(0.0, 0.0)
+    STATE["frame_buffer"].clear()
+    STATE["smooth_prev"] = 0.0
+    STATE["telemetry_log"] = []
+    STATE["start_time"] = None
+    send(0.0, 0.4)
 
 
 def send(steering, throttle):
