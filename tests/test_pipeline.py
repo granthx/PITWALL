@@ -90,7 +90,7 @@ def test_temporal_stacking(tmp_path):
     x, _y = DrivingDataset(s, training=False)[0]
     assert tuple(x.shape) == (9, CFG.img_h, CFG.img_w)
 
-    for arch in ("pilotnet", "resnet18"):
+    for arch in ("pilotnet", "resnet18", "spatial_resnet18"):
         model = build_model(arch, in_channels=9)
         out = model(x.unsqueeze(0))
         assert tuple(out.shape) == (1, 1), f"temporal {arch}"
