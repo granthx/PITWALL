@@ -35,7 +35,7 @@ from flask import Flask
 from PIL import Image
 
 from .config import CFG
-from .control import smooth_steering, throttle_for
+from .control import lane_centering_assist, smooth_steering, throttle_for
 from .model import build_model
 from .preprocess import preprocess, to_tensor_array
 
@@ -45,7 +45,12 @@ STATE = {
     "model": None,
     "device": "cpu",
     "smooth_prev": 0.0,  # low-pass state
-    "smoothing": 0.0,
+    "smoothing": 0.25,
+    "steer_gain": 1.15,
+    "lka_weight": 1.0,
+    "max_speed": CFG.max_speed,
+    "telemetry_log": [],
+    "start_time": None,
     "record_dir": None,
     "frame_i": 0,
     "frame_buffer": collections.deque(maxlen=1),
@@ -79,9 +84,10 @@ def telemetry(sid, data):
         xf = torch.flip(x, dims=[3])
         out = STATE["model"](torch.cat([x, xf], dim=0))
         raw = 0.5 * float(out[0].item() - out[1].item())
-    steering = smooth_steering(
-        float(np.clip(raw, -1.0, 1.0)), STATE["smooth_prev"], STATE["smoothing"]
-    )
+    # Vision-based Lane-Keeping Assist (curb repulsion & road-symmetry guard)
+    lka_nudge = lane_centering_assist(img) * STATE["lka_weight"]
+    scaled = float(np.clip(raw * STATE["steer_gain"] + lka_nudge, -1.0, 1.0))
+    steering = smooth_steering(scaled, STATE["smooth_prev"], STATE["smoothing"])
     STATE["smooth_prev"] = steering
     throttle = throttle_for(speed, steering)
     dt_ms = (time.perf_counter() - t0) * 1000.0
