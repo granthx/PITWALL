@@ -50,12 +50,21 @@ def _hook_convs(model: torch.nn.Module):
     acts = []
 
     def hook(_m, _i, out):
-        acts.append(out.detach()[0].cpu())
+        if isinstance(out, torch.Tensor) and out.dim() == 4:
+            acts.append(out.detach()[0].cpu())
 
     handles = []
-    for mod in model.modules():
-        if isinstance(mod, (torch.nn.ELU, torch.nn.ReLU)) and not isinstance(mod, torch.nn.ReLU6):
-            handles.append(mod.register_forward_hook(hook))
+    if hasattr(model, "layers") and hasattr(model, "stem"):
+        # ResNet/SpatialResNet: hook stem and 4 representative layer blocks
+        handles.append(model.stem.register_forward_hook(hook))
+        n_blocks = len(model.layers)
+        step = max(1, n_blocks // 4)
+        for i in range(step - 1, n_blocks, step):
+            handles.append(model.layers[i].register_forward_hook(hook))
+    else:
+        for mod in model.modules():
+            if isinstance(mod, (torch.nn.ELU, torch.nn.ReLU)) and not isinstance(mod, torch.nn.ReLU6):
+                handles.append(mod.register_forward_hook(hook))
     return acts, handles
 
 
