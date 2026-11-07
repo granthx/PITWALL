@@ -21,3 +21,16 @@ def throttle_for(speed: float, steering: float, max_speed: float | None = None) 
 def smooth_steering(new: float, prev: float, weight: float) -> float:
     s = weight * prev + (1.0 - weight) * new
     return float(np.clip(s, -1.0, 1.0))
+
+
+def lane_centering_assist(rgb: np.ndarray) -> float:
+    roi = rgb[95:135, :]
+    r = roi[:, :, 0].astype(np.float32)
+    g = roi[:, :, 1].astype(np.float32)
+    b = roi[:, :, 2].astype(np.float32)
+
+    # 1. Red curb repulsion (Track 1 red/white boundary stripes)
+    red_curb = ((r > 150) & ((r - g) > 40) & ((r - b) > 40)).astype(np.float32)
+    left_curb = float(red_curb[:, :115].mean())
+    right_curb = float(red_curb[:, 205:].mean())
+    return (left_curb - right_curb) * 1.4
