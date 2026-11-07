@@ -90,6 +90,12 @@ def main():
         action="store_true",
         help="skip per-epoch snapshots (needed by scripts/training_story.py)",
     )
+    ap.add_argument(
+        "--frame-stack",
+        type=int,
+        default=CFG.frame_stack,
+        help="number of consecutive frames to stack along channel axis (default 1)",
+    )
     ap.add_argument("--run-dir", default=None, help="override the runs/<timestamp> directory")
     args = ap.parse_args()
 
@@ -105,7 +111,7 @@ def main():
     os.makedirs(run_dir, exist_ok=True)
 
     df = balance(load_log(args.data))
-    samples = expand_cameras(df, args.data)
+    samples = expand_cameras(df, args.data, frame_stack=args.frame_stack)
     tr, va = train_test_split(samples, test_size=CFG.val_split, random_state=args.seed)
     print(f"rows after balancing: {len(df)} | samples: train={len(tr)} val={len(va)}")
 
@@ -123,7 +129,7 @@ def main():
         num_workers=args.workers,
     )
 
-    model = build_model(args.arch).to(device)
+    model = build_model(args.arch, in_channels=3 * args.frame_stack).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=CFG.weight_decay)
     loss_fn = nn.MSELoss()
     sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=2)
@@ -173,7 +179,12 @@ def main():
             f"val_MAE≈{v_mae * CFG.sim_max_angle_deg:.2f} deg"
         )
 
-        state = {"state_dict": model.state_dict(), "arch": args.arch, "epoch": ep}
+        state = {
+            "state_dict": model.state_dict(),
+            "arch": args.arch,
+            "epoch": ep,
+            "frame_stack": args.frame_stack,
+        }
         if not args.no_epoch_ckpts:
             torch.save(state, os.path.join(run_dir, f"epoch_{ep:02d}.pt"))
         if v < best:

@@ -13,6 +13,7 @@ class Config:
     img_h: int = 66  # network input height
     img_w: int = 200  # network input width
     img_c: int = 3
+    frame_stack: int = 1  # 1 = single-frame (default); >=2 = temporal context stacking
 
     # --- Data ---
     steering_correction: float = 0.2  # offset applied to left/right camera images

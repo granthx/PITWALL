@@ -66,3 +66,30 @@ def test_model_forward():
     for arch in ("pilotnet", "resnet18"):
         out = build_model(arch)(torch.zeros(2, 3, CFG.img_h, CFG.img_w))
         assert tuple(out.shape) == (2, 1), arch
+
+
+def test_temporal_stacking(tmp_path):
+    pytest.importorskip("torch")
+    subprocess.check_call(
+        [
+            sys.executable,
+            os.path.join(ROOT, "scripts/make_synthetic_data.py"),
+            "--out",
+            str(tmp_path),
+            "--n",
+            "10",
+        ]
+    )
+    from src.data import DrivingDataset, expand_cameras, load_log
+    from src.model import build_model
+
+    df = load_log(str(tmp_path))
+    s = expand_cameras(df, str(tmp_path), frame_stack=3)
+    assert len(s) == len(df) * 3
+    x, _y = DrivingDataset(s, training=False)[0]
+    assert tuple(x.shape) == (9, CFG.img_h, CFG.img_w)
+
+    for arch in ("pilotnet", "resnet18"):
+        model = build_model(arch, in_channels=9)
+        out = model(x.unsqueeze(0))
+        assert tuple(out.shape) == (1, 1), f"temporal {arch}"

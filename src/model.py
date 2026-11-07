@@ -23,12 +23,13 @@ from .config import CFG
 
 
 class PilotNet(nn.Module):
-    """NVIDIA PilotNet. Input (N, 3, 66, 200) in [0, 255] -> steering in [-1, 1]."""
+    """NVIDIA PilotNet. Input (N, in_channels, 66, 200) in [0, 255] -> steering in [-1, 1]."""
 
-    def __init__(self, dropout: float = CFG.dropout):
+    def __init__(self, dropout: float = CFG.dropout, in_channels: int = 3):
         super().__init__()
+        self.in_channels = in_channels
         self.features = nn.Sequential(
-            nn.Conv2d(3, 24, 5, stride=2),
+            nn.Conv2d(in_channels, 24, 5, stride=2),
             nn.ELU(),
             nn.Conv2d(24, 36, 5, stride=2),
             nn.ELU(),
@@ -82,14 +83,15 @@ class BasicBlock(nn.Module):
 class ResNetSteer(nn.Module):
     """ResNet-18 backbone (adapted stem for 66x200 input) + 1-unit regressor head.
 
-    Input (N, 3, 66, 200) in [0, 255] -> steering in [-1, 1], same contract as
+    Input (N, in_channels, 66, 200) in [0, 255] -> steering in [-1, 1], same contract as
     PilotNet so the two architectures are drop-in comparable.
     """
 
-    def __init__(self, dropout: float = CFG.dropout):
+    def __init__(self, dropout: float = CFG.dropout, in_channels: int = 3):
         super().__init__()
+        self.in_channels = in_channels
         self.stem = nn.Sequential(
-            nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False),  # 66x200 -> 33x100
+            nn.Conv2d(in_channels, 64, 7, stride=2, padding=3, bias=False),  # 66x200 -> 33x100
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(3, stride=2, padding=1),  # -> 16x50
@@ -121,8 +123,10 @@ class ResNetSteer(nn.Module):
 ARCHS = {"pilotnet": PilotNet, "resnet18": ResNetSteer}
 
 
-def build_model(arch: str = "pilotnet", dropout: float = CFG.dropout) -> nn.Module:
+def build_model(
+    arch: str = "pilotnet", dropout: float = CFG.dropout, in_channels: int = 3
+) -> nn.Module:
     """Factory used everywhere a checkpoint is loaded, so ``--arch`` round-trips."""
     if arch not in ARCHS:
         raise ValueError(f"unknown arch '{arch}' (choose from {sorted(ARCHS)})")
-    return ARCHS[arch](dropout=dropout)
+    return ARCHS[arch](dropout=dropout, in_channels=in_channels)

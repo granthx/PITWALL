@@ -49,20 +49,38 @@ def balance(df: pd.DataFrame, cfg=CFG) -> pd.DataFrame:
     return df.drop(index=drop).reset_index(drop=True)
 
 
-def expand_cameras(df: pd.DataFrame, data_dir: str, cfg=CFG) -> list[tuple[str, float]]:
+def expand_cameras(
+    df: pd.DataFrame, data_dir: str, cfg=CFG, frame_stack: int = 1
+) -> list[tuple]:
     """Turn each row into 3 samples (center/left/right) with steering offsets.
-    Left/right cameras teach the car how to recover back to the lane centre."""
+    Left/right cameras teach the car how to recover back to the lane centre.
+
+    If frame_stack > 1, stacks consecutive frames (t - frame_stack + 1 ... t)
+    to provide temporal velocity/trajectory context.
+    """
     samples = []
-    for _, r in df.iterrows():
-        a = float(r["steering"])
-        samples.append((_resolve(data_dir, r["center"]), a))
-        samples.append((_resolve(data_dir, r["left"]), a + cfg.steering_correction))
-        samples.append((_resolve(data_dir, r["right"]), a - cfg.steering_correction))
+    n = len(df)
+    if frame_stack <= 1:
+        for _, r in df.iterrows():
+            a = float(r["steering"])
+            samples.append((_resolve(data_dir, r["center"]), a))
+            samples.append((_resolve(data_dir, r["left"]), a + cfg.steering_correction))
+            samples.append((_resolve(data_dir, r["right"]), a - cfg.steering_correction))
+    else:
+        for i in range(n):
+            hist_idx = [max(0, i - k) for k in range(frame_stack - 1, -1, -1)]
+            a = float(df.iloc[i]["steering"])
+            c_paths = [_resolve(data_dir, df.iloc[j]["center"]) for j in hist_idx]
+            l_paths = [_resolve(data_dir, df.iloc[j]["left"]) for j in hist_idx]
+            r_paths = [_resolve(data_dir, df.iloc[j]["right"]) for j in hist_idx]
+            samples.append((c_paths, a))
+            samples.append((l_paths, a + cfg.steering_correction))
+            samples.append((r_paths, a - cfg.steering_correction))
     return [(p, float(np.clip(a, -1, 1))) for p, a in samples]
 
 
 class DrivingDataset(Dataset):
-    def __init__(self, samples: list[tuple[str, float]], training: bool, seed: int = 0):
+    def __init__(self, samples: list[tuple], training: bool, seed: int = 0):
         self.samples = samples
         self.training = training
         self.rng = np.random.default_rng(seed)
@@ -72,6 +90,22 @@ class DrivingDataset(Dataset):
 
     def __getitem__(self, i):
         path, angle = self.samples[i]
+        if isinstance(path, (list, tuple)):
+            tensors = []
+            do_flip = self.training and (self.rng.random() < 0.5)
+            if do_flip:
+                angle = -angle
+            for p in path:
+                bgr = cv2.imread(p)
+                if bgr is None:
+                    raise FileNotFoundError(p)
+                img = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                if do_flip:
+                    img = cv2.flip(img, 1)
+                tensors.append(to_tensor_array(preprocess(img)))
+            x = torch.from_numpy(np.concatenate(tensors, axis=0))
+            return x, torch.tensor([angle], dtype=torch.float32)
+
         bgr = cv2.imread(path)
         if bgr is None:
             raise FileNotFoundError(path)

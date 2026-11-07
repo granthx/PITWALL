@@ -6,6 +6,14 @@ original video. The one thing this environment could not do is run the Unity
 simulator (no display / no sim build), so the autonomous-lap criterion is
 documented rather than claimed — see "Not verified".
 
+## 2026-11-07 — Real Udacity dataset integration, temporal frame stacking & cloud GPU setup
+- Downloaded and verified the complete official Udacity sample dataset into `data/recording/` (8,037 driving log entries, 24,108 multi-camera frames).
+- Added `scripts/download_dataset.py` cross-platform automated download and extraction utility.
+- Added temporal context stacking (`--frame-stack k`) across `src/model.py`, `src/data.py`, `src/train.py`, and `src/config.py` with multi-frame coherent augmentations and unit tests.
+- All 6 unit tests passing (`pytest -q` in 17s).
+- Verified initial real-world PilotNet benchmark: achieved 3.79° MAE on held-out real validation frames (`--split val`).
+- Produced real-world explainability saliency (`runs/saliency_real.png`) with 0.71 road-focused mass and multi-layer feature maps (`runs/maps_real.png`).
+
 ## 2026-10-31 — agent build-out (Phases 0–6)
 
 ### Phase 0 — get green

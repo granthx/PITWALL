@@ -9,3 +9,5 @@ runs/
 *.h5
 *.pt
 .pytest_cache/
+.ruff_cache/
+code.zip
