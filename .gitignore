@@ -1,13 +1,14 @@
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 data/*
 !data/.gitkeep
+
+# Models, Checkpoints & Weights
 models/*
 !models/.gitkeep
-runs/
-*.h5
 *.pt
-.pytest_cache/
-.ruff_cache/
-code.zip
+*.pth
+*.h5
+*.onnx
+*.onnx.data
