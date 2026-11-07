@@ -282,14 +282,25 @@ def api_predict():
 
     model, device = STATE["model"], STATE["device"]
     x, small = prep_image(rgb)
+    in_channels = getattr(model, "in_channels", 3)
+    if in_channels > 3 and x.shape[0] == 3:
+        n_stack = in_channels // 3
+        seq = STATE.get("seq_paths", {}).get(os.path.basename(full), []) if path else []
+        if len(seq) == n_stack and all(os.path.exists(p) for p in seq):
+            tensors = [prep_image(read_frame_rgb(p))[0] for p in seq]
+            x_in = torch.cat(tensors, dim=0)
+        else:
+            x_in = x.repeat(n_stack, 1, 1)
+    else:
+        x_in = x
 
     t1 = time.perf_counter()
     with torch.no_grad():
-        steer = float(model(x.unsqueeze(0).to(device)).item())
+        steer = float(model(x_in.unsqueeze(0).to(device)).item())
     infer_ms = (time.perf_counter() - t1) * 1000.0
     steer = float(np.clip(steer, -1, 1))
 
-    sal = gradient_saliency(model, x)
+    sal = gradient_saliency(model, x_in)
     over = overlay_saliency(small, sal)
     sal3 = cv2.resize(
         over, (small.shape[1] * 3, small.shape[0] * 3), interpolation=cv2.INTER_NEAREST
