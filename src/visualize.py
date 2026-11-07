@@ -82,8 +82,11 @@ def activations(model, x: torch.Tensor) -> list:
 def gradient_saliency(model, x: torch.Tensor) -> np.ndarray:
     """|d steer / d pixel| averaged over channels, normalised to [0, 1].
 
-    x: (3, H, W) YUV float tensor in [0, 255] scale (the model input).
+    x: (C, H, W) YUV float tensor in [0, 255] scale (the model input).
     """
+    in_channels = getattr(model, "in_channels", 3)
+    if x.dim() == 3 and x.shape[0] == 3 and in_channels > 3:
+        x = x.repeat(in_channels // 3, 1, 1)
     xin = x[None].clone().requires_grad_(True)
     model(xin).backward()
     sal = xin.grad[0].abs().mean(0).numpy()
