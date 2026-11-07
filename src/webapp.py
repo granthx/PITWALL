@@ -342,8 +342,14 @@ def main():
 
     STATE["device"] = "cuda" if torch.cuda.is_available() else "cpu"
     STATE["model_path"] = a.model
-    ckpt = torch.load(a.model, map_location=STATE["device"])
-    model = build_model(ckpt.get("arch", "pilotnet")).to(STATE["device"])
+    ckpt = torch.load(a.model, map_location=STATE["device"], weights_only=False)
+    arch = ckpt.get("arch", "pilotnet")
+    in_channels = ckpt.get("frame_stack", 1) * 3
+    if "stem.0.weight" in ckpt.get("state_dict", {}):
+        in_channels = ckpt["state_dict"]["stem.0.weight"].shape[1]
+    elif "features.0.weight" in ckpt.get("state_dict", {}):
+        in_channels = ckpt["state_dict"]["features.0.weight"].shape[1]
+    model = build_model(arch, in_channels=in_channels).to(STATE["device"])
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
     STATE["model"] = model
