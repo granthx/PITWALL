@@ -12,3 +12,10 @@ models/*
 *.h5
 *.onnx
 *.onnx.data
+
+# Evaluation, logs & JSON files
+*.json
+!pyproject.toml
+
+# Training & closed-loop run artifacts
+runs/
