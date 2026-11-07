@@ -362,14 +362,21 @@ def main():
 
     df = load_log(a.data)
     labels = {}
+    seq_paths = {}
+    n_stack = max(1, in_channels // 3)
     for col, off in (
+
         ("center", 0.0),
         ("left", CFG.steering_correction),
         ("right", -CFG.steering_correction),
     ):
-        for p, s in zip(df[col], df["steering"]):
-            labels[os.path.basename(str(p))] = float(s) + off
+        col_list = [os.path.basename(str(p).strip().replace("\\", "/")) for p in df[col]]
+        for idx_i, (bname, s) in enumerate(zip(col_list, df["steering"])):
+            labels[bname] = float(s) + off
+            hist = [os.path.join(a.data, "IMG", col_list[max(0, idx_i - k)]) for k in range(n_stack - 1, -1, -1)]
+            seq_paths[bname] = hist
     STATE["labels"] = labels
+    STATE["seq_paths"] = seq_paths
 
     print(
         f"PIT WALL console  ·  model={a.model} ({ckpt.get('arch', 'pilotnet')})  "
