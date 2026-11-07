@@ -89,8 +89,12 @@ def telemetry(sid, data):
     scaled = float(np.clip(raw * STATE["steer_gain"] + lka_nudge, -1.0, 1.0))
     steering = smooth_steering(scaled, STATE["smooth_prev"], STATE["smoothing"])
     STATE["smooth_prev"] = steering
-    throttle = throttle_for(speed, steering)
+    throttle = throttle_for(speed, steering, max_speed=STATE["max_speed"])
     dt_ms = (time.perf_counter() - t0) * 1000.0
+
+    steer_deg = steering * CFG.sim_max_angle_deg
+    STATE["telemetry_log"].append((time.perf_counter() - STATE["start_time"], speed, steer_deg, throttle))
+
     print(
         f"steer={steering:+.3f} ({steering * CFG.sim_max_angle_deg:+.1f} deg)  "
         f"throttle={throttle:+.2f}  speed={speed:.1f}  infer={dt_ms:.1f} ms"
