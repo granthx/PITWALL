@@ -108,8 +108,14 @@ def send(steering, throttle):
 
 
 def load_model(path, device):
-    ckpt = torch.load(path, map_location=device)
-    m = build_model(ckpt.get("arch", "pilotnet")).to(device)
+    ckpt = torch.load(path, map_location=device, weights_only=False)
+    arch = ckpt.get("arch", "pilotnet")
+    in_channels = ckpt.get("frame_stack", 1) * 3
+    if "stem.0.weight" in ckpt["state_dict"]:
+        in_channels = ckpt["state_dict"]["stem.0.weight"].shape[1]
+    elif "features.0.weight" in ckpt["state_dict"]:
+        in_channels = ckpt["state_dict"]["features.0.weight"].shape[1]
+    m = build_model(arch, in_channels=in_channels).to(device)
     m.load_state_dict(ckpt["state_dict"])
     m.eval()
     return m
