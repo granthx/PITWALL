@@ -109,6 +109,8 @@ def main():
 
     run_dir = args.run_dir or time.strftime("runs/%Y%m%d-%H%M%S")
     os.makedirs(run_dir, exist_ok=True)
+    if os.path.dirname(args.out):
+        os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
     df = balance(load_log(args.data))
     samples = expand_cameras(df, args.data, frame_stack=args.frame_stack)
