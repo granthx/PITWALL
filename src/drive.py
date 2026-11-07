@@ -75,7 +75,10 @@ def telemetry(sid, data):
         x = torch.from_numpy(arr).unsqueeze(0).to(STATE["device"])
     t0 = time.perf_counter()
     with torch.no_grad():
-        raw = float(STATE["model"](x).item())
+        # Symmetric Test-Time Flip De-Biasing: eliminates any left/right drift bias
+        xf = torch.flip(x, dims=[3])
+        out = STATE["model"](torch.cat([x, xf], dim=0))
+        raw = 0.5 * float(out[0].item() - out[1].item())
     steering = smooth_steering(
         float(np.clip(raw, -1.0, 1.0)), STATE["smooth_prev"], STATE["smoothing"]
     )
