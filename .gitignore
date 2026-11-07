@@ -1,8 +1,19 @@
+# Byte-compiled / optimized / Python caches
 __pycache__/
 *.py[cod]
+*$py.class
+*.pytest_cache/
+.ruff_cache/
+
+# Virtual Environments
 .venv/
+venv/
+env/
+
+# Datasets
 data/*
 !data/.gitkeep
+*.csv
 
 # Models, Checkpoints & Weights
 models/*
@@ -19,3 +30,13 @@ models/*
 
 # Training & closed-loop run artifacts
 runs/
+
+# Standalone 3D Simulator & executables
+simulator/
+*.exe
+
+# Archives & OS files
+*.zip
+*.tar.gz
+.DS_Store
+Thumbs.db
