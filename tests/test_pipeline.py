@@ -63,8 +63,9 @@ def test_model_forward():
     torch = pytest.importorskip("torch")
     from src.model import build_model
 
-    for arch in ("pilotnet", "resnet18"):
-        out = build_model(arch)(torch.zeros(2, 3, CFG.img_h, CFG.img_w))
+    for arch in ("pilotnet", "resnet18", "spatial_resnet18"):
+        channels = 9 if arch == "spatial_resnet18" else 3
+        out = build_model(arch, in_channels=channels)(torch.zeros(2, channels, CFG.img_h, CFG.img_w))
         assert tuple(out.shape) == (2, 1), arch
 
 
