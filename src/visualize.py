@@ -76,7 +76,7 @@ def activations(model, x: torch.Tensor) -> list:
         model(x[None] if x.dim() == 3 else x)
     for h in handles:
         h.remove()
-    return [a.numpy() for a in acts[:5]]
+    return [a.numpy() for a in acts if a.dim() == 3][:5]
 
 
 def gradient_saliency(model, x: torch.Tensor) -> np.ndarray:
