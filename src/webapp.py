@@ -300,14 +300,19 @@ def api_predict():
 
     acts = activations(model, x)
     maps = []
-    for i, (act, role) in enumerate(zip(acts, ["LINES", "LINES", "SHAPES", "SHAPES", "ANGLE"])):
+    roles = ["LINES", "LINES", "SHAPES", "SHAPES", "ANGLE"]
+    for i, act in enumerate(acts[:5]):
+        if act.ndim != 3:
+            continue
+        role = roles[i] if i < len(roles) else f"STAGE {i+1}"
         norm = _norm(act)
+        top_chans = [int(c) for c in np.argsort(-act.mean(axis=(1, 2)))[:3]]
         maps.append(
             {
                 "layer": i + 1,
                 "role": role,
                 "mean": _thumb(norm.mean(0), scale=6),
-                "chans": [_thumb(norm[c], scale=6) for c in np.argsort(-act.mean(axis=(1, 2)))[:3]],
+                "chans": [_thumb(norm[c], scale=6) for c in top_chans],
             }
         )
 
