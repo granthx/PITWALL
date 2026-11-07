@@ -21,6 +21,7 @@ eventlet.monkey_patch()
 
 import argparse
 import base64
+import collections
 import json
 import os
 import time
@@ -47,6 +48,8 @@ STATE = {
     "smoothing": 0.0,
     "record_dir": None,
     "frame_i": 0,
+    "frame_buffer": collections.deque(maxlen=1),
+    "in_channels": 3,
 }
 
 
