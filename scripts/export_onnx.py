@@ -53,12 +53,14 @@ def main():
 
     ckpt = torch.load(a.model, map_location="cpu")
     arch = ckpt.get("arch", "pilotnet")
-    model = build_model(arch)
+    frame_stack = ckpt.get("frame_stack", 1)
+    in_channels = 3 * frame_stack
+    model = build_model(arch, in_channels=in_channels)
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
 
     out = a.out or os.path.splitext(a.model)[0] + f"_{arch}.onnx"
-    dummy = torch.zeros(1, CFG.img_c, CFG.img_h, CFG.img_w)
+    dummy = torch.zeros(1, in_channels, CFG.img_h, CFG.img_w)
     torch.onnx.export(
         model,
         dummy,
@@ -73,7 +75,7 @@ def main():
 
     rng = np.random.default_rng(0)
     frames = [
-        rng.integers(0, 255, (CFG.img_c, CFG.img_h, CFG.img_w)).astype(np.float32)
+        rng.integers(0, 255, (in_channels, CFG.img_h, CFG.img_w)).astype(np.float32)
         for _ in range(a.n)
     ]
     if a.data:
