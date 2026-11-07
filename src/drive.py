@@ -139,6 +139,25 @@ def send(steering, throttle):
     )
 
 
+@sio.on("disconnect")
+def disconnect(sid):
+    print("\nsimulator disconnected:", sid)
+    if STATE["telemetry_log"]:
+        logs = STATE["telemetry_log"]
+        times, speeds, steers, throttles = zip(*logs)
+        dur = times[-1] - times[0] if len(times) > 1 else 0
+        mean_spd = sum(speeds) / len(speeds)
+        top_spd = max(speeds)
+        jitter = float(np.mean(np.abs(np.diff(steers)))) if len(steers) > 1 else 0.0
+        print("=" * 55)
+        print("         AUTONOMOUS RUN BENCHMARK SUMMARY        ")
+        print("=" * 55)
+        print(f"Total Time Active : {dur:.1f} s ({len(logs)} frames)")
+        print(f"Average Speed     : {mean_spd:.1f} mph | Top Speed: {top_spd:.1f} mph")
+        print(f"Steering Jitter   : {jitter:.2f}° per step")
+        print("=" * 55)
+
+
 def load_model(path, device):
     ckpt = torch.load(path, map_location=device, weights_only=False)
     arch = ckpt.get("arch", "pilotnet")
