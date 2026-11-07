@@ -12,6 +12,9 @@ def throttle_for(speed: float, steering: float, max_speed: float | None = None) 
     top = max_speed if max_speed is not None else CFG.max_speed
     turn_severity = min(abs(steering) * 3.0, 1.0)
     target = top - (top - CFG.min_speed) * turn_severity
+    if speed > target + 1.5 and abs(steering) > 0.12:
+        # Active corner-entry braking so high-speed runs don't drift wide
+        return float(np.clip((target - speed) * 0.25, -0.8, 0.0))
     return float(np.clip(1.0 - speed / max(target, 1.0), -0.5, 1.0))
 
 
