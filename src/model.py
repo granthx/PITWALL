@@ -170,7 +170,12 @@ class SpatialResNet18(nn.Module):
         return self.head(self.pool(self.layers(self.stem(x))))
 
 
-ARCHS = {"pilotnet": PilotNet, "resnet18": ResNetSteer}
+ARCHS = {
+    "pilotnet": PilotNet,
+    "resnet18": ResNetSteer,
+    "spatial_resnet18": SpatialResNet18,
+    "resnet18_pro": SpatialResNet18,
+}
 
 
 def build_model(
