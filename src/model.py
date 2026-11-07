@@ -179,9 +179,11 @@ ARCHS = {
 
 
 def build_model(
-    arch: str = "pilotnet", dropout: float = CFG.dropout, in_channels: int = 3
+    arch: str = "pilotnet", dropout: float = CFG.dropout, in_channels: int | None = None
 ) -> nn.Module:
     """Factory used everywhere a checkpoint is loaded, so ``--arch`` round-trips."""
     if arch not in ARCHS:
         raise ValueError(f"unknown arch '{arch}' (choose from {sorted(ARCHS)})")
+    if in_channels is None:
+        in_channels = 9 if arch in ("spatial_resnet18", "resnet18_pro") else 3
     return ARCHS[arch](dropout=dropout, in_channels=in_channels)
